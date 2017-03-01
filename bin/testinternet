@@ -1,0 +1,56 @@
+#!/bin/bash
+# Test internet connectivity
+# If it has changed state since the last run then log it
+
+# Update this to your own email address
+EMAIL=root
+IP=8.8.8.8
+STATEFILE=/var/tmp/testinternet.state
+
+TIMESTAMP=`date --iso-8601=seconds`
+NEWCHANGE=`date +%s`
+OLDSTATE="unknown"
+LASTCHANGE=
+
+# showTime based on: http://stackoverflow.com/a/37728680/69231
+showTime () {
+    if [ $1 -lt 86400 ]; then 
+        date -d@${1} -u '+%Hh:%Mmn:%Ss';
+    else 
+        echo "$(($1/86400)) days $(date -d@$(($1%86400)) -u '+%Hh:%Mm:%Ss')" ;
+    fi
+}
+
+
+if [ -f $STATEFILE ]
+then
+  read < $STATEFILE OLDSTATE LASTCHANGE
+fi
+
+if ping -c 1 $IP >/dev/null 2>&1
+then
+  NEWSTATE="online"
+else
+  NEWSTATE="offline"
+fi
+
+if [ "$NEWSTATE" != "$OLDSTATE" ]
+then
+		if [ -z "$LASTCHANGE" ]
+		then
+				DIFF=""
+				DIFFMSG="First Run"
+		else
+				DIFFSECONDS=$(( $NEWCHANGE - $LASTCHANGE ))
+				DIFFSTR=$(showTime $DIFFSECONDS)
+				DIFFMSG="$OLDSTATE for $DIFFSTR"
+		fi
+  echo "$TIMESTAMP $NEWSTATE (Was $DIFFMSG)"
+  NEWLINE=$'\n'
+  MAILCONTENT=$"The internet connection on ${HOSTNAME} changed to ${NEWSTATE} at ${TIMESTAMP}${NEWLINE}${NEWLINE}It was ${DIFFMSG}${NEWLINE}${NEWLINE}Reported by $0"
+  SUBJECT="Internet Status Change: $NEWSTATE $HOSTNAME ($DIFFMSG)"
+  mail -s "$SUBJECT" "$EMAIL" <<<"$MAILCONTENT"
+	LASTCHANGE=$NEWCHANGE
+fi
+
+echo $NEWSTATE $LASTCHANGE > $STATEFILE
