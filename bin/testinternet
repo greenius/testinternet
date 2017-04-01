@@ -7,6 +7,9 @@ EMAIL=root
 IP=8.8.8.8
 PORT=domain
 STATEFILE=/var/tmp/testinternet.state
+# Number of seconds to timeout when checking connection
+# If it is too low, you may get false warnings due to congestion
+TIMEOUT=5
 
 TIMESTAMP=`date --iso-8601=seconds`
 NEWCHANGE=`date +%s`
@@ -25,13 +28,13 @@ showTime () {
 testConnection () {
 		if command -v nc &>/dev/null
 		then
-				nc -zw1 $IP $PORT
+				nc -z -w ${TIMEOUT} $IP $PORT
 				return $?
 		fi
 
 		if command -v ping &>/dev/null
 		then
-				ping -c 1 $IP &>/dev/null
+				ping -c 1 -w ${TIMEOUT} $IP &>/dev/null
 				return $?
 		fi
 
